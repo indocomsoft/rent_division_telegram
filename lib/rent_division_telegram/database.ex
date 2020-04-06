@@ -1,7 +1,13 @@
 defmodule RentDivisionTelegram.Database do
+  @moduledoc """
+  A GenServer that stores state about each conversation.
+
+  Entries older than `@ttl` seconds will be purged
+  """
+
   use GenServer
 
-  # seconds
+  # ttl is in seconds
   @ttl 3600
 
   alias RentDivisionTelegram.Database.Entry

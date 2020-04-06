@@ -1,4 +1,8 @@
 defmodule RentDivisionTelegram.Bot do
+  @moduledoc """
+  The main implementation of the bot.
+  """
+
   @bot :rent_division_telegram
 
   use ExGram.Bot,
@@ -8,7 +12,7 @@ defmodule RentDivisionTelegram.Bot do
 
   alias RentDivisionTelegram.Database
 
-  def bot(), do: @bot
+  def bot, do: @bot
 
   def handle({:command, "start", _msg}, context) do
     answer(
@@ -302,63 +306,16 @@ defmodule RentDivisionTelegram.Bot do
          %{
            command: :submit,
            stage: 3,
-           data: data
+           data: data = %{done: done, leftover: leftover = [{room_id, _name} | rooms]}
          },
          context
        ) do
-    %{
-      done: done,
-      leftover: leftover = [{room_id, _name} | rooms],
-      rent: rent,
-      renter_id: renter_id
-    } = data
-
-    ask_next_rooms = fn next_rooms, next_done ->
-      case next_rooms do
-        [] ->
-          Database.delete(id)
-
-          if rent == next_done |> Map.values() |> Enum.sum() do
-            case api_post("/renters/#{renter_id}/valuations", %{"valuations" => next_done}) do
-              {:ok, %{status_code: 200}} ->
-                answer(context, "Your valuation has been submitted")
-
-              {:ok, %{status_code: 409}} ->
-                answer(context, "Valuation for one particular renter can only be submitted once.")
-
-              other ->
-                answer(
-                  context,
-                  "Something when wrong. Please contact @indocomsoft and forward him this message.\n\n\n#{
-                    inspect(other)
-                  }"
-                )
-            end
-          else
-            answer(
-              context,
-              "Your valuations do not sum up to the rent of the apartment. Aborting."
-            )
-          end
-
-        [{_, name} | _] ->
-          answer(
-            context,
-            """
-            Note that your valuations must sum up to the rent of the apartment, $#{rent}.
-
-            How much do you value room #{name}? (send only a whole number, e.g. 1000)
-            """
-          )
-      end
-    end
-
     if text == :first do
-      ask_next_rooms.(leftover, done)
+      ask_next_rooms(leftover, done, id, data, context)
     else
       case Integer.parse(text) do
         {value, ""} ->
-          ask_next_rooms.(rooms, Map.put(done, room_id, value))
+          ask_next_rooms(rooms, Map.put(done, room_id, value), id, data, context)
 
         _ ->
           answer(context, "Invalid rent. Please only send a whole number, e.g. 1000")
@@ -366,7 +323,47 @@ defmodule RentDivisionTelegram.Bot do
     end
   end
 
-  defp base_url(), do: Application.get_env(:rent_division_telegram, :base_url)
+  defp ask_next_rooms(next_rooms, next_done, id, %{renter_id: renter_id, rent: rent}, context) do
+    case next_rooms do
+      [] ->
+        Database.delete(id)
+
+        if rent == next_done |> Map.values() |> Enum.sum() do
+          case api_post("/renters/#{renter_id}/valuations", %{"valuations" => next_done}) do
+            {:ok, %{status_code: 200}} ->
+              answer(context, "Your valuation has been submitted")
+
+            {:ok, %{status_code: 409}} ->
+              answer(context, "Valuation for one particular renter can only be submitted once.")
+
+            other ->
+              answer(
+                context,
+                "Something when wrong. Please contact @indocomsoft and forward him this message.\n\n\n#{
+                  inspect(other)
+                }"
+              )
+          end
+        else
+          answer(
+            context,
+            "Your valuations do not sum up to the rent of the apartment. Aborting."
+          )
+        end
+
+      [{_, name} | _] ->
+        answer(
+          context,
+          """
+          Note that your valuations must sum up to the rent of the apartment, $#{rent}.
+
+          How much do you value room #{name}? (send only a whole number, e.g. 1000)
+          """
+        )
+    end
+  end
+
+  defp base_url, do: Application.get_env(:rent_division_telegram, :base_url)
 
   defp api_get(path) do
     HTTPoison.get("#{base_url()}#{path}")
