@@ -29,7 +29,7 @@ defmodule RentDivisionTelegram.Bot do
   end
 
   def handle({:command, "apt", %{text: text, from: %{id: id}}}, context) do
-    with {:ok, %{body: body}} <- api_get("/apartments/#{text}"),
+    with {:ok, %{body: body, status_code: 200}} <- api_get("/apartments/#{text}"),
          {:ok,
           %{"status" => status, "results" => results, "renters" => renters, "rooms" => rooms}} <-
            Jason.decode(body) do
@@ -77,6 +77,17 @@ defmodule RentDivisionTelegram.Bot do
         """
       )
     else
+      {:ok, %{status_code: 404}} ->
+        answer(context, "Apartment with that id is not found")
+
+      {:ok, response} ->
+        answer(
+          context,
+          "Something went wrong. Please contact @indocomsoft and forward him this message.\n\n\n#{
+            inspect(response)
+          }"
+        )
+
       {:error, error} ->
         answer(
           context,
@@ -102,6 +113,10 @@ defmodule RentDivisionTelegram.Bot do
       nil -> answer(context, "Use /help for commands you can run")
       entry -> process(id, :done, entry, context)
     end
+  end
+
+  def handle({:command, _, _}, context) do
+    answer(context, "Use /help for commands you can run")
   end
 
   def handle({:text, text, %{from: %{id: id}}}, context) do
@@ -166,10 +181,13 @@ defmodule RentDivisionTelegram.Bot do
         Database.delete(id)
         uniq_rooms = Enum.uniq(rooms)
 
-        with {:ok, %{body: body}} <- api_post("/apartments", %{name: name, rent: rent}),
+        with {:ok, %{body: body, status_code: 200}} <-
+               api_post("/apartments", %{name: name, rent: rent}),
              {:ok, %{"id" => id}} <- Jason.decode(body),
-             {:ok, _} <- api_post("/apartments/#{id}/renters", %{names: renters}),
-             {:ok, _} <- api_post("/apartments/#{id}/rooms", %{names: uniq_rooms}) do
+             {:ok, %{status_code: 200}} <-
+               api_post("/apartments/#{id}/renters", %{names: renters}),
+             {:ok, %{status_code: 200}} <-
+               api_post("/apartments/#{id}/rooms", %{names: uniq_rooms}) do
           answer(context, """
           Created apartment #{name} with $#{rent} rent.
           The renters are #{Enum.join(renters, ", ")}.
@@ -178,6 +196,14 @@ defmodule RentDivisionTelegram.Bot do
           The created apartment id is #{id}
           """)
         else
+          {:ok, response} ->
+            answer(
+              context,
+              "Something went wrong. Please contact @indocomsoft and forward him this message.\n\n\n#{
+                inspect(response)
+              }"
+            )
+
           {:error, error} ->
             answer(
               context,
@@ -195,7 +221,7 @@ defmodule RentDivisionTelegram.Bot do
   end
 
   defp process(id, apartment_id, %{command: :submit, stage: 1}, context) do
-    with {:ok, %{body: body}} <- api_get("/apartments/#{apartment_id}"),
+    with {:ok, %{body: body, stataus_code: 200}} <- api_get("/apartments/#{apartment_id}"),
          {:ok, %{"name" => name, "rent" => rent, "renters" => renters, "rooms" => rooms}} <-
            Jason.decode(body) do
       renters_lookup =
@@ -203,9 +229,7 @@ defmodule RentDivisionTelegram.Bot do
         |> Enum.map(fn %{"id" => id, "name" => name} -> {"#{id}", name} end)
         |> Map.new()
 
-      IO.inspect(rooms)
       rooms = Enum.map(rooms, fn %{"id" => id, "name" => name} -> {id, name} end)
-      IO.inspect(rooms)
 
       rendered_renters =
         renters_lookup
@@ -224,6 +248,17 @@ defmodule RentDivisionTelegram.Bot do
         """
       )
     else
+      {:ok, %{status_code: 404}} ->
+        answer(context, "Apartment with that id is not found")
+
+      {:ok, response} ->
+        answer(
+          context,
+          "Something went wrong. Please contact @indocomsoft and forward him this message.\n\n\n#{
+            inspect(response)
+          }"
+        )
+
       {:error, error} ->
         Database.delete(id)
 
@@ -278,11 +313,7 @@ defmodule RentDivisionTelegram.Bot do
       renter_id: renter_id
     } = data
 
-    IO.inspect(data)
-
     ask_next_rooms = fn next_rooms, next_done ->
-      IO.inspect({next_rooms, next_done})
-
       case next_rooms do
         [] ->
           Database.delete(id)
@@ -311,12 +342,6 @@ defmodule RentDivisionTelegram.Bot do
           end
 
         [{_, name} | _] ->
-          IO.inspect(%{data | done: next_done, leftover: next_rooms})
-
-          IO.inspect(
-            Database.put(id, :submit, %{data | done: next_done, leftover: next_rooms}, 3)
-          )
-
           answer(
             context,
             """

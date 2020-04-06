@@ -18,7 +18,6 @@ defmodule RentDivisionTelegram.Database do
 
   @impl true
   def handle_call({:get, id}, _from, state) when is_integer(id) do
-    IO.inspect(state)
     {:reply, Map.get(state, id), state}
   end
 
