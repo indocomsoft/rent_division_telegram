@@ -28,7 +28,7 @@ defmodule RentDivisionTelegram.Bot do
     )
   end
 
-  def handle({:command, "apt", %{text: text, from: %{id: id}}}, context) do
+  def handle({:command, "apt", %{text: text}}, context) do
     with {:ok, %{body: body, status_code: 200}} <- api_get("/apartments/#{text}"),
          {:ok,
           %{"status" => status, "results" => results, "renters" => renters, "rooms" => rooms}} <-
@@ -162,7 +162,7 @@ defmodule RentDivisionTelegram.Bot do
     end
   end
 
-  defp process(id, text, %{command: :start, data: data, stage: 3}, context) do
+  defp process(id, text, %{command: :start, data: data, stage: 3}, _context) do
     renters = Map.get(data, :renters, [])
     Database.put(id, :start, Map.put(data, :renters, [text | renters]), 3)
   end
@@ -215,7 +215,7 @@ defmodule RentDivisionTelegram.Bot do
     end
   end
 
-  defp process(id, text, %{command: :start, data: data, stage: 4}, context) do
+  defp process(id, text, %{command: :start, data: data, stage: 4}, _context) do
     renters = Map.get(data, :rooms, [])
     Database.put(id, :start, Map.put(data, :rooms, [text | renters]), 4)
   end
@@ -308,7 +308,7 @@ defmodule RentDivisionTelegram.Bot do
        ) do
     %{
       done: done,
-      leftover: leftover = [{room_id, name} | rooms],
+      leftover: leftover = [{room_id, _name} | rooms],
       rent: rent,
       renter_id: renter_id
     } = data
