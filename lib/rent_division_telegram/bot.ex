@@ -225,7 +225,7 @@ defmodule RentDivisionTelegram.Bot do
   end
 
   defp process(id, apartment_id, %{command: :submit, stage: 1}, context) do
-    with {:ok, %{body: body, stataus_code: 200}} <- api_get("/apartments/#{apartment_id}"),
+    with {:ok, %{body: body, status_code: 200}} <- api_get("/apartments/#{apartment_id}"),
          {:ok, %{"name" => name, "rent" => rent, "renters" => renters, "rooms" => rooms}} <-
            Jason.decode(body) do
       renters_lookup =
