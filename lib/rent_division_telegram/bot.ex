@@ -323,7 +323,13 @@ defmodule RentDivisionTelegram.Bot do
     end
   end
 
-  defp ask_next_rooms(next_rooms, next_done, id, %{renter_id: renter_id, rent: rent}, context) do
+  defp ask_next_rooms(
+         next_rooms,
+         next_done,
+         id,
+         data = %{renter_id: renter_id, rent: rent},
+         context
+       ) do
     case next_rooms do
       [] ->
         Database.delete(id)
@@ -352,6 +358,8 @@ defmodule RentDivisionTelegram.Bot do
         end
 
       [{_, name} | _] ->
+        Database.put(id, :submit, %{data | done: next_done, leftover: next_rooms}, 3)
+
         answer(
           context,
           """
