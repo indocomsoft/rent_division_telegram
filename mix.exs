@@ -24,7 +24,7 @@ defmodule RentDivisionTelegram.MixProject do
     [
       {:ex_gram, "~> 0.10"},
       {:tesla, "~> 1.2"},
-      {:hackney, "~> 1.12"},
+      {:hackney, "~> 1.12", github: "benoitc/hackney", ref: "3aa2c5fd3001d92bb3b914aab2db2cda9a6f38b5", override: true},
       {:jason, ">= 1.0.0"},
       {:httpoison, "~> 1.6"},
       {:credo, "~> 1.3", only: [:dev, :test], runtime: false}
