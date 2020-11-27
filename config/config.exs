@@ -7,7 +7,7 @@ case token do
     import_config "secrets.exs"
 
   x when is_binary(x) ->
-    config :ex_gram, token: token
+    config :rent_division_telegram, token: token
 
     base_url =
       System.get_env("BASE_URL") ||
