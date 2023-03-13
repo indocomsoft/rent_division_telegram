@@ -26,7 +26,7 @@ defmodule RentDivisionTelegram.MixProject do
       {:tesla, "~> 1.2"},
       {:hackney, "~> 1.12"},
       {:jason, ">= 1.0.0"},
-      {:httpoison, "~> 1.6"},
+      {:httpoison, "~> 2.1"},
       {:credo, "~> 1.3", only: [:dev, :test], runtime: false}
     ]
   end
